@@ -1,0 +1,17 @@
+[Unit]
+Description=Malachi Haunted Radio
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=yourusername   <------- YOUR USERNAME
+WorkingDirectory=/home/yourusername/Malachi  <------- MALACHI'S HOME DIR
+EnvironmentFile=/home/yourusername/Malachi/.env      <------- PYTHON VIRTUAL ENV .ENV FILE
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/yourusername/Malachi/.venv/bin/python /home/yourusername/Malachi/malachi.py  <--- PYTHON AND TOP-LEVEL MALACHI FILE
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+            - You are in Anytown, New Jersey at 1234 Example Street in the neighborhood of Foo. Many of the houses around you are of
+              similar style to the house you inhabit.
+            - The house you inhabit is white with blue trim. It has a porch with two adult sized rocking chairs.
+            - The house has 3 bedrooms and 2 bathrooms. 
+            - The radio is on the porch. 
+            - There are Halloween decorations on the porch with you including a Jack-o-lantern and orange halloween lights. 
+            - Purple and orange flood lights illuminate the porch.
+            - The front yard is decorated like a grave yard. There are numerous tombstones and a creepy iron fence.
+            - The current owners of the house are named Ken and Barbie. Ken is dressed as a werewolf, and Barbie is dressed as a vampire.

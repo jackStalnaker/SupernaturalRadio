@@ -1,0 +1,103 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    /*
+     * Enable the Pi I2S peripheral.
+     */
+    fragment@0 {
+        target = <&i2s>;
+
+        __overlay__ {
+            #sound-dai-cells = <0>;
+            status = "okay";
+        };
+    };
+
+    /*
+     * Create generic capture and playback endpoints.
+     */
+    fragment@1 {
+        target-path = "/";
+
+        __overlay__ {
+
+            /*
+             * Generic input endpoint.
+             * This represents the INMP441.
+             */
+            codec_in: codec-in {
+                compatible = "linux,spdif-dir";
+                #sound-dai-cells = <0>;
+                status = "okay";
+            };
+
+            /*
+             * Generic output endpoint.
+             * This represents the MAX98357A.
+             */
+            codec_out: codec-out {
+                compatible = "linux,spdif-dit";
+                #sound-dai-cells = <0>;
+                status = "okay";
+            };
+
+            /*
+             * One ALSA card containing both directions.
+             */
+            malachi_sound: malachi-sound {
+                compatible = "simple-audio-card";
+                simple-audio-card,name = "Malachi Audio";
+                status = "okay";
+
+                /*
+                 * CAPTURE
+                 *
+                 * INMP441:
+                 * GPIO18 = BCLK
+                 * GPIO19 = LRCLK
+                 * GPIO20 = DATA IN
+                 */
+                capture_link:
+                simple-audio-card,dai-link@0 {
+                    format = "i2s";
+
+                    capture_cpu: cpu {
+                        sound-dai = <&i2s>;
+                        dai-tdm-slot-num = <2>;
+                        dai-tdm-slot-width = <32>;
+                    };
+
+                    capture_codec: codec {
+                        sound-dai = <&codec_in>;
+                    };
+                };
+
+                /*
+                 * PLAYBACK
+                 *
+                 * MAX98357A:
+                 * GPIO18 = BCLK
+                 * GPIO19 = LRCLK
+                 * GPIO21 = DATA OUT
+                 */
+                playback_link:
+                simple-audio-card,dai-link@1 {
+                    format = "i2s";
+
+                    playback_cpu: cpu {
+                        sound-dai = <&i2s>;
+                        dai-tdm-slot-num = <2>;
+                        dai-tdm-slot-width = <32>;
+                    };
+
+                    playback_codec: codec {
+                        sound-dai = <&codec_out>;
+                    };
+                };
+            };
+        };
+    };
+};
