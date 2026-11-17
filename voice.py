@@ -13,37 +13,33 @@ class Voice:
     TTS_MODEL_ID = "eleven_v3_conversational"
     # TTS_MODEL_ID = "eleven_v3"
     TTS_OUTPUT_FORMAT="mp3_44100_128"
-    TTS_VOICE_ID="Q2OX7wVoStVzaXrMZxnH" # This is the one we used previously
-    # TTS_VOICE_ID = "oAOAwbMjOHfvazPLHDRc" 
 
-    SWEEP_LENGTH = 73
-    SWEEP_FILENAME = "fx/freesound_community-tuning-radio-7150.mp3"
+    # SWEEP_LENGTH = 73
+    # SWEEP_FILENAME = "fx/freesound_community-tuning-radio-7150.mp3"
 
     # Feature rich
-    HISS_LENGTH = 148
-    HISS_FILENAME = "fx/freesound_community-radio-noise-11-59824.mp3"
+    # HISS_LENGTH = 148
+    # HISS_FILENAME = "fx/freesound_community-radio-noise-11-59824.mp3"
     # Plain static
     # HISS_LENGTH = 60
     # HISS_FILENAME = "fx/freesound_community-radio-static-2-26831.mp3"
 
     # Breathing
-    BREATHING_LENGTHS = [21, 13, 29]
-    BREATHING_FILENAMES = [
-        "fx/freesound_community-breathing-6811.mp3",  # Plain
-        "fx/freesound_community-male-breathing-slow-14558.mp3",  # Sharp
-        "fx/freesound_community-man_breathing_asleep-75120.mp3"  # Asleep
-    ]
+    # BREATHING_LENGTHS = [21, 13, 29]
+    # BREATHING_FILENAMES = [
+        # "fx/freesound_community-breathing-6811.mp3",  # Plain
+        # "fx/freesound_community-male-breathing-slow-14558.mp3",  # Sharp
+        # "fx/freesound_community-man_breathing_asleep-75120.mp3"  # Asleep
+    # ]
 
-    JAZZ_PLAYLIST_FILE = "jazz_playlist.txt"
-    JAZZ_FOLDER = Path("./music")
+    MUSIC_PLAYLIST_FILE = "music_playlist.txt"
 
-    def __init__(self):
+    def __init__(self, voice_id):
         print("Voice initializing...")
         self.tts_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+        self.voice_id = voice_id
 
-        self.jazz_files = list(self.JAZZ_FOLDER.glob("*.mp3"))
-        self.create_jazz_playlist()
-        self.jazz_process = None
+        self.music_process = None
         self.hiss_process = None
         self.breathing_process = None
         print("Voice done initializing.")
@@ -52,7 +48,7 @@ class Voice:
         """Stream ElevenLabs MP3 directly through ffplay and support a
         callback that acts on the RMS value."""
         stream = self.tts_client.text_to_speech.stream(
-            voice_id=self.TTS_VOICE_ID,
+            voice_id=self.voice_id,
             model_id=self.TTS_MODEL_ID,
             text=text,
         )
@@ -117,8 +113,8 @@ class Voice:
             player.wait()
             meter_thread.join()
 
-    def play_tuning_sweep(self, duration=3.0, volume=100, callback=None):
-        start = random.uniform(0, self.SWEEP_LENGTH - duration)
+    def play_effect(self, filename, length, sample_duration, volume=100, callback=None):
+        start = random.uniform(0, length - sample_duration)
 
         player = subprocess.Popen([
             "ffplay",
@@ -126,9 +122,9 @@ class Voice:
             "-autoexit",
             "-loglevel", "error",
             "-ss", str(start),
-            "-t", str(duration),
+            "-t", str(sample_duration),
             "-volume", str(volume),
-            self.SWEEP_FILENAME
+            filename
         ])
 
         if callback is not None:
@@ -136,27 +132,28 @@ class Voice:
 
         player.wait()
 
-    def create_jazz_playlist(self):
-        """Create a randomized playlist of jazz files."""
-        random.shuffle(self.jazz_files)
-        with open(self.JAZZ_PLAYLIST_FILE, "w") as f:
-            for filepath in self.jazz_files:
+    def create_music_playlist(self, music_folder):
+        """Create a randomized playlist of music files."""
+        music_files = list(Path(music_folder).glob("*.mp3"))
+        random.shuffle(music_files)
+        with open(self.MUSIC_PLAYLIST_FILE, "w") as f:
+            for filepath in music_files:
                 # Handle apostrophes in the filename
                 filename = str(filepath.resolve()).replace("'", r"'\''")
                 f.write(f"file '{filename}'\n")
 
-    def start_jazz(self, volume=100):
-        """Create and play a jazz playlist"""
+    def start_music(self, music_folder, volume=100):
+        """Create and play a music playlist"""
         # Popen is still open
-        if self.jazz_process is not None:
+        if self.music_process is not None:
             # And process is still alive
-            if self.jazz_process.poll() is None:
+            if self.music_process.poll() is None:
                 return
 
-            self.jazz_process = None
+            self.music_process = None
 
-        self.create_jazz_playlist()
-        self.jazz_process = subprocess.Popen([
+        self.create_music_playlist(music_folder)
+        self.music_process = subprocess.Popen([
             "ffplay",
             "-nodisp",
             "-autoexit",
@@ -164,101 +161,58 @@ class Voice:
             "-f", "concat",
             "-safe", "0",
             "-volume", str(volume),
-            "jazz_playlist.txt",
+            "music_playlist.txt",
         ])
 
-    def stop_jazz(self):
-        """Stop playing jazz."""
-        if self.jazz_process is not None:
-            if self.jazz_process.poll() is None:
-                self.jazz_process.terminate()
+    def stop_music(self):
+        """Stop playing music."""
+        if self.music_process is not None:
+            if self.music_process.poll() is None:
+                self.music_process.terminate()
 
                 try:
-                    self.jazz_process.wait(timeout=2)
+                    self.music_process.wait(timeout=2)
                 except subprocess.TimeoutExpired:
-                    self.jazz_process.kill()
-                    self.jazz_process.wait()
+                    self.music_process.kill()
+                    self.music_process.wait()
 
-            self.jazz_process = None
+            self.music_process = None
 
-    def start_hiss(self, volume=8):
+    def start_effect(self, filename, volume=8, start_offset=0, process=None):
         # Popen is still open
-        if self.hiss_process is not None:
+        if process is not None:
             # And process is still alive
-            if self.hiss_process.poll() is None:
+            if process.poll() is None:
                 return
 
-            self.hiss_process = None
+            process = None
         
-        # Start at some random location
-        start = random.uniform(0, self.HISS_LENGTH)
-
-        self.hiss_process = subprocess.Popen([
+        process = subprocess.Popen([
             "ffplay",
             "-nodisp",
             "-loglevel", "error",
             "-loop", "0",
-            "-ss", str(start),
+            "-ss", str(start_offset),
             "-volume", str(volume),
-            self.HISS_FILENAME
+            filename
         ])
+        return process
 
-    def stop_hiss(self):
-        if self.hiss_process is not None:
-            if self.hiss_process.poll() is None:
-                self.hiss_process.terminate()
+    def stop_effect(self, process):
+        if process is not None:
+            if process.poll() is None:
+                process.terminate()
 
                 try:
-                    self.hiss_process.wait(timeout=1)
+                    process.wait(timeout=1)
                 except subprocess.TimeoutExpired:
-                    self.hiss_process.kill()
-                    self.hiss_process.wait()
+                    process.kill()
+                    process.wait()
 
-        self.hiss_process = None
-
-    def start_breathing(self, volume=100):
-        # Popen is still open
-        if self.breathing_process is not None:
-            # And process is still alive
-            if self.breathing_process.poll() is None:
-                return
-
-            self.breathing_process = None
-
-        # Pick a random breathing noise
-        b_id = random.randint(0, len(self.BREATHING_LENGTHS) - 1)
-
-        # Start at some random location
-        start = random.uniform(0, self.BREATHING_LENGTHS[b_id])
-
-        self.breathing_process = subprocess.Popen([
-            "ffplay",
-            "-nodisp",
-            "-loglevel", "error",
-            "-loop", "0",
-            "-ss", str(start),
-            "-volume", str(volume),
-            self.BREATHING_FILENAMES[b_id]
-        ])
-
-    def stop_breathing(self):
-        if self.breathing_process is not None:
-            if self.breathing_process.poll() is None:
-                self.breathing_process.terminate()
-
-                try:
-                    self.breathing_process.wait(timeout=1)
-                except subprocess.TimeoutExpired:
-                    self.breathing_process.kill()
-                    self.breathing_process.wait()
-
-        self.breathing_process = None
-
+        process = None
 
     def cleanup(self):
-        self.stop_jazz()
-        self.stop_hiss()
-        self.stop_breathing()
+        self.stop_music()
 
 def main():
     if "ELEVENLABS_API_KEY" not in os.environ:
@@ -270,25 +224,33 @@ def main():
         all_rms.append(rms)
         print(f"Dial level: {rms:.1f} dB")
 
-    voice = Voice()
+    MALACHI_VOICE_ID="Q2OX7wVoStVzaXrMZxnH"
+    voice = Voice(voice_id=MALACHI_VOICE_ID)
     try:
-        voice.start_jazz(volume=10)
+        voice.start_music(music_folder="characters/malachi/music", volume=10)
         text="[quietly] Well. Someone has come to visit.  [curious] I don't believe we've met before. Or perhaps we have. [whispers] Be careful that you do not look behind you now. [relieved] Okay. It's gone."
         time.sleep(5)
-        voice.stop_jazz()
+        voice.stop_music()
 
         voice.play_tuning_sweep(volume=10)
-        voice.start_hiss(volume=2)
+        SWEEP_LENGTH = 73
+        SWEEP_FILENAME = "characters/malachi/fx/freesound_community-tuning-radio-7150.mp3"
+        voice.play_effect(SWEEP_FILENAME, SWEEP_LENGTH, 3, volume=100, callback=None)
+        HISS_LENGTH = 148
+        HISS_FILENAME = "characters/malachi/fx/freesound_community-radio-noise-11-59824.mp3"
+        voice.start_effect(volume=2)
+        hiss_process = voice.start_effect(HISS_FILENAME, volume=2, start_offset=5, process=None)
+
         voice.speak(text, rms_callback=test_callback, volume=30)
         time.sleep(1)
-        voice.stop_hiss()
+        voice.stop_effect(hiss_process)
         with open("test_rms.txt", "w") as f:
             for rms in all_rms:
                 f.write(f"{rms:1f}\n")
 
-        # voice.start_jazz()
+        # voice.start_music()
         # time.sleep(3)
-        # voice.stop_jazz()
+        # voice.stop_music()
 
         # voice.start_breathing()
         # time.sleep(3)

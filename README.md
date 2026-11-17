@@ -1,11 +1,17 @@
-# Malachi: the haunted radio
+# A multicharacter supernatural radio
 
-Malachi is a haunted radio (or whatever suitable appliance you want--he could be a haunted microwave
+This is an expansion of my Malachi haunted radio project, allowing for selectable characters. Right now,
+it's just Malachi and Santa, because when Halloween was over, I realized I could repurpose the same 
+radio prop as a communicator to the North Pole. 
+
+This is a haunted radio (or whatever suitable appliance you want--he could be a haunted microwave
 if you wanted). This project uses OpenAI and ElevenLabs to generate responses to queries from party
-guests on the fly. He is designed to run on a Raspberry Pi. Specifically, I have my Malachi running on a 
-Raspberry Pi Zero 2 W. If you want to run him on something else, you'll have to change the Pi specific 
+guests on the fly. It is designed to run on a Raspberry Pi. Specifically, I have my radio running on a 
+Raspberry Pi Zero 2 W. If you want to run it on something else, you'll have to change the Pi specific 
 hardware support, including I2S audio, the Pi camera module, and the various linux layers connected
 above those. 
+
+## TODO update remainder of README
 
 ## How Malachi interacts with a guest
 Malachi's basic behavior is handled through the top-level malachi.py module. This module loads Malachi's
