@@ -45,7 +45,7 @@ class Brain():
         self.scene_instructions = scene_instructions
         self.conversation = self.client.conversations.create()
 
-    def react_to_text(self, ,visitor_input):
+    def react_to_text(self, visitor_input):
         response = self.client.responses.create(
             model="gpt-5.6-luna",
             conversation=self.conversation.id,
@@ -127,12 +127,19 @@ def environment_check():
 
 
 if __name__ == "__main__":
+    response_instructions = """
+    This is a test routine. Just answer in 1-2 sentences.
+    """
+    scene_instructions = """
+    This is a test routine. Just describe the image in 1-2 sentences.
+    """
+
     environment_check()
     brain = Brain() 
     sample_rate, audio = read("test_speech.wav")
     text = brain.transcribe(audio, audio_rate=sample_rate)
     print(text)
-    brain.start_new_conversation()
+    brain.start_new_conversation(response_instructions, scene_instructions)
     response = brain.react_to_text(text)
     print(response)
 

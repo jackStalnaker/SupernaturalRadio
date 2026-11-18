@@ -12,8 +12,11 @@ class Malachi(BaseCharacter):
 
     SPEECH_VOLUME = 80
 
+    # Voice
+    VOICE_ID="Q2OX7wVoStVzaXrMZxnH"
+
     # Music
-    MUSIC_FOLDER = "./music"
+    MUSIC_FOLDER = "music"
     MUSIC_VOLUME = 50
 
     # Sweep
@@ -39,17 +42,22 @@ class Malachi(BaseCharacter):
         "fx/freesound_community-man_breathing_asleep-75120.mp3"  # Asleep
     ]
 
+    PHYSICAL_SETTING_FILENAME = "physical_setting.txt"
+    PHYSICAL_SETTING_FILENAME_DEFAULT = "physical_setting_example.txt"
+
     # dial servo
     MALACHI_ANGLE = 90.0  # Where malachi is on the dial
 
     def __init__(self, radio):
         print("Initializing Malachi...")
         super().__init__(radio)
+        self.radio.voice.select_voice(self.VOICE_ID)
+        self.asset_dir = Path(__file__).resolve().parent
 
         # This block is just for redacting my personal information in the repository.
-        physical_setting_f = Path(self.PHYSICAL_SETTING_FILENAME)
+        physical_setting_f = self.asset_dir / Path(self.PHYSICAL_SETTING_FILENAME)
         if not physical_setting_f.exists():
-            physical_setting_f = Path(self.PHYSICAL_SETTING_FILENAME_DEFAULT)
+            physical_setting_f = self.asset_dir / Path(self.PHYSICAL_SETTING_FILENAME_DEFAULT)
 
         physical_setting = physical_setting_f.read_text(encoding="utf-8").strip()
 
@@ -166,7 +174,7 @@ class Malachi(BaseCharacter):
 
     def play_tuning_sweep(self, duration, callback=None):
         self.radio.voice.play_effect(
-            self.SWEEP_FILENAME,
+            self.asset_dir / self.SWEEP_FILENAME,
             self.SWEEP_LENGTH,
             duration,
             volume=self.SWEEP_VOLUME,
@@ -176,7 +184,7 @@ class Malachi(BaseCharacter):
     def start_hiss(self):
         start_offset = random.uniform(0, self.HISS_LENGTH)
         self.hiss_process = self.radio.voice.start_effect(
-            self.HISS_FILENAME,
+            self.asset_dir / self.HISS_FILENAME,
             volume=self.HISS_VOLUME,
             start_offset=start_offset,
             process=self.hiss_process
@@ -188,7 +196,7 @@ class Malachi(BaseCharacter):
 
     def start_breathing(self):
         b_id = random.randint(0, len(self.BREATHING_LENGTHS) - 1)
-        filename = self.BREATHING_FILENAMES[b_id]
+        filename = self.asset_dir / self.BREATHING_FILENAMES[b_id]
         length = self.BREATHING_LENGTHS[b_id]
         start_offset = random.uniform(0, length)
         self.breathing_process = self.radio.voice.start_effect(
@@ -205,7 +213,7 @@ class Malachi(BaseCharacter):
     def wait_for_guest(self):
         self.radio.dial_led.center()
         self.radio.dial_servo.center()
-        self.radio.voice.start_music(self.MUSIC_FOLDER, volume=self.MUSIC_VOLUME)
+        self.radio.voice.start_music(self.asset_dir / self.MUSIC_FOLDER, volume=self.MUSIC_VOLUME)
         self.radio.presence.start_monitoring()
         print("Monitoring for presence.")
         self.radio.presence.wait_until_present()
@@ -219,14 +227,14 @@ class Malachi(BaseCharacter):
 
     def interact_with_guest(self):
         print("Beginning guest interaction.")
-        self.radio.brain.start_new_conversation()
+        self.radio.brain.start_new_conversation(self.response_instructions, self.scene_instructions)
 
         self.radio.dial_led.set_rgb(0, 255, 0)
-        self.radio.voice.play_tuning_sweep(duration=2, callback=self.radio.dial_servo.random_sweep_during, volume=self.SWEEP_VOLUME)
+        self.play_tuning_sweep(duration=2, callback=self.radio.dial_servo.random_sweep_during)
         self.radio.dial_servo.set_angle(self.MALACHI_ANGLE)
         self.radio.dial_led.center()
-        self.radio.voice.start_breathing(volume=self.BREATHING_VOLUME)
-        self.radio.voice.start_hiss(volume=self.HISS_VOLUME)
+        self.start_breathing()
+        self.start_hiss()
         first_words = True
 
         while True:
@@ -258,18 +266,18 @@ class Malachi(BaseCharacter):
             print(f"Response: {response_text}")
 
             if first_words:
-                self.radio.voice.play_tuning_sweep(duration=2, callback=self.radio.dial_servo.random_sweep_during, volume=self.SWEEP_VOLUME)
+                self.play_tuning_sweep(duration=2, callback=self.radio.dial_servo.random_sweep_during)
                 self.radio.dial_servo.set_angle(self.MALACHI_ANGLE)
                 first_words = False
 
-            self.radio.voice.stop_breathing()
+            self.stop_breathing()
             self.radio.voice.speak(response_text, rms_callback=self.radio.dial_led.set_led_to_voice, volume=self.SWEEP_VOLUME)
-            self.radio.voice.start_breathing()
+            self.start_breathing()
 
-        self.radio.voice.stop_breathing()
+        self.stop_breathing()
         if random.random() < self.CALLAFTER_PROB:
             self.call_after_guest()
-        self.radio.voice.stop_hiss()
+        self.stop_hiss()
 
     def call_after_guest(self):
         # Call after the guest (trigger ocassionally)
@@ -297,35 +305,3 @@ class Malachi(BaseCharacter):
             self.radio.voice.cleanup()
             self.radio.eyes.close()
 
-
-def environment_check():
-    if "ELEVENLABS_API_KEY" not in os.environ:
-        print("You need to set the ElevenLabs auth key environment variable first.")
-        sys.exit(1)
-
-    if "OPENAI_API_KEY" not in os.environ:
-        print("You need to set the OpenAI auth key environment variable first.")
-        sys.exit(1)
-
-
-def main():
-    print("checking environment")
-    environment_check()
-
-    print("initializing")
-    malachi = Malachi()
-
-    print("running")
-
-    try:
-        malachi.run()
-    except KeyboardInterrupt:
-        print("Interrupted.")
-    finally:
-        malachi.radio.presence.stop_monitoring()
-        malachi.radio.voice.cleanup()
-        malachi.radio.eyes.close()
-
-
-if __name__ == "__main__":
-    main()

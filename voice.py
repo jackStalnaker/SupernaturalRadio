@@ -34,19 +34,25 @@ class Voice:
 
     MUSIC_PLAYLIST_FILE = "music_playlist.txt"
 
-    def __init__(self, voice_id):
+    def __init__(self):
         print("Voice initializing...")
         self.tts_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
-        self.voice_id = voice_id
+        self.voice_id = None
 
         self.music_process = None
         self.hiss_process = None
         self.breathing_process = None
         print("Voice done initializing.")
 
+    def select_voice(self, voice_id):
+        self.voice_id = voice_id
+
     def speak(self, text, rms_callback=None, volume=100):
         """Stream ElevenLabs MP3 directly through ffplay and support a
         callback that acts on the RMS value."""
+        if self.voice_id is None:
+            raise ValueError("Must select a voice first")
+
         stream = self.tts_client.text_to_speech.stream(
             voice_id=self.voice_id,
             model_id=self.TTS_MODEL_ID,
@@ -225,20 +231,19 @@ def main():
         print(f"Dial level: {rms:.1f} dB")
 
     MALACHI_VOICE_ID="Q2OX7wVoStVzaXrMZxnH"
-    voice = Voice(voice_id=MALACHI_VOICE_ID)
+    voice = Voice()
+    voice.select_voice(MALACHI_VOICE_ID)
     try:
         voice.start_music(music_folder="characters/malachi/music", volume=10)
         text="[quietly] Well. Someone has come to visit.  [curious] I don't believe we've met before. Or perhaps we have. [whispers] Be careful that you do not look behind you now. [relieved] Okay. It's gone."
         time.sleep(5)
         voice.stop_music()
 
-        voice.play_tuning_sweep(volume=10)
         SWEEP_LENGTH = 73
         SWEEP_FILENAME = "characters/malachi/fx/freesound_community-tuning-radio-7150.mp3"
-        voice.play_effect(SWEEP_FILENAME, SWEEP_LENGTH, 3, volume=100, callback=None)
+        voice.play_effect(SWEEP_FILENAME, SWEEP_LENGTH, 3, volume=10, callback=None)
         HISS_LENGTH = 148
         HISS_FILENAME = "characters/malachi/fx/freesound_community-radio-noise-11-59824.mp3"
-        voice.start_effect(volume=2)
         hiss_process = voice.start_effect(HISS_FILENAME, volume=2, start_offset=5, process=None)
 
         voice.speak(text, rms_callback=test_callback, volume=30)
