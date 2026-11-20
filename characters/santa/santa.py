@@ -34,7 +34,7 @@ class Santa(BaseCharacter):
     HISS_FILENAME = "fx/freesound_community-radio-static-2-26831.mp3"
 
     # Ambience
-    AMBIENCE_VOLUME = 10
+    AMBIENCE_VOLUME = 100
     AMBIENCE_LENGTH = 300
     AMBIENCE_FILENAME = "fx/santa_ambience.mp3"
 
@@ -193,10 +193,9 @@ class Santa(BaseCharacter):
         self.hiss_process = None
 
     def start_ambience(self):
-        filename = self.asset_dir / self.AMBIENCE_FILENAME
         start_offset = random.uniform(0, self.AMBIENCE_LENGTH)
         self.ambience_process = self.radio.voice.start_effect(
-            filename,
+            self.asset_dir / self.AMBIENCE_FILENAME,
             volume=self.AMBIENCE_VOLUME,
             start_offset=start_offset,
             process=self.ambience_process
@@ -244,6 +243,7 @@ class Santa(BaseCharacter):
         self.radio.dial_led.center()
         first_words = True
 
+        self.start_ambience()
         self.welcome_guest()
 
         while True:
@@ -291,7 +291,7 @@ class Santa(BaseCharacter):
 
         prompt = (
             "The guest has just walked away. "
-            "Call after them with a brief, spooky or sarcastic parting remark. "
+            "Call after them with a brief witty remark referencing your upcoming visit to their house on Christmas Eve. "
             "Keep it to one short sentence. Do not ask a question."
         )
         response = self.radio.brain.react_to_text(prompt)
