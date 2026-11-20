@@ -33,14 +33,10 @@ class Santa(BaseCharacter):
     HISS_LENGTH = 60
     HISS_FILENAME = "fx/freesound_community-radio-static-2-26831.mp3"
 
-    # Breathing
-    BREATHING_VOLUME = 100
-    BREATHING_LENGTHS = [21, 13, 29]
-    BREATHING_FILENAMES = [
-        "fx/freesound_community-breathing-6811.mp3",  # Plain
-        "fx/freesound_community-male-breathing-slow-14558.mp3",  # Sharp
-        "fx/freesound_community-man_breathing_asleep-75120.mp3"  # Asleep
-    ]
+    # Ambience
+    AMBIENCE_VOLUME = 10
+    AMBIENCE_LENGTH = 300
+    AMBIENCE_FILENAME = "fx/santa_ambience.mp3"
 
     PHYSICAL_SETTING_FILENAME = "physical_setting.txt"
     PHYSICAL_SETTING_FILENAME_DEFAULT = "physical_setting_example.txt"
@@ -172,7 +168,7 @@ class Santa(BaseCharacter):
         print("Initializing Santa done.")
 
         self.hiss_process = None
-        self.breathing_process = None
+        self.ambience_process = None
 
     def play_tuning_sweep(self, duration, callback=None):
         self.radio.voice.play_effect(
@@ -196,21 +192,19 @@ class Santa(BaseCharacter):
         self.radio.voice.stop_effect(self.hiss_process)
         self.hiss_process = None
 
-    def start_breathing(self):
-        b_id = random.randint(0, len(self.BREATHING_LENGTHS) - 1)
-        filename = self.asset_dir / self.BREATHING_FILENAMES[b_id]
-        length = self.BREATHING_LENGTHS[b_id]
-        start_offset = random.uniform(0, length)
-        self.breathing_process = self.radio.voice.start_effect(
+    def start_ambience(self):
+        filename = self.asset_dir / self.AMBIENCE_FILENAME
+        start_offset = random.uniform(0, self.AMBIENCE_LENGTH)
+        self.ambience_process = self.radio.voice.start_effect(
             filename,
-            volume=self.BREATHING_VOLUME,
+            volume=self.AMBIENCE_VOLUME,
             start_offset=start_offset,
-            process=self.breathing_process
+            process=self.ambience_process
         )
 
-    def stop_breathing(self):
-        self.radio.voice.stop_effect(self.breathing_process)
-        self.breathing_process = None
+    def stop_ambience(self):
+        self.radio.voice.stop_effect(self.ambience_process)
+        self.ambience_process = None
 
     def wait_for_guest(self):
         self.radio.dial_led.center()
@@ -223,9 +217,21 @@ class Santa(BaseCharacter):
         frame = self.radio.eyes.capture_encoded_frame()
         print("Getting description of scene.")
         self.scene = self.radio.brain.describe_encoded_image(frame)
-        print("Stopping jazz.")
+        print("Stopping music.")
         self.radio.voice.stop_music()
         return True
+
+    def welcome_guest(self):
+        # Welcome the guest with a brief greeting referencing the current scene.
+
+        prompt = (
+            "The guest has just arrived. "
+            "Greet them with a brief hello referencing the current scene."
+            "Keep it to one short sentence."
+        )
+        query_text = f"PROMPT:\n {prompt} \n\n SCENE:\n {self.scene}"
+        response = self.radio.brain.react_to_text(query_text)
+        self.radio.voice.speak(response, rms_callback=self.radio.dial_led.set_led_to_voice, volume=self.SPEECH_VOLUME)
 
     def interact_with_guest(self):
         print("Beginning guest interaction.")
@@ -236,9 +242,9 @@ class Santa(BaseCharacter):
         self.play_tuning_sweep(duration=2, callback=self.radio.dial_servo.random_sweep_during)
         self.radio.dial_servo.set_angle(self.SANTA_ANGLE)
         self.radio.dial_led.center()
-        self.start_breathing()
-        self.start_hiss()
         first_words = True
+
+        self.welcome_guest()
 
         while True:
             # Check if guest is still present
@@ -259,28 +265,26 @@ class Santa(BaseCharacter):
             else:
                 query_text = self.radio.brain.transcribe(query_audio)
 
-            if first_words:
-                query_text = f"GUEST QUERY:\n {query_text} \n\n SCENE:\n {self.scene}"
-            else:
-                query_text = f"GUEST QUERY:\n {query_text}"
+            #if first_words:
+            #    query_text = f"GUEST QUERY:\n {query_text} \n\n SCENE:\n {self.scene}"
+            #else:
+            #    query_text = f"GUEST QUERY:\n {query_text}"
+            query_text = f"GUEST QUERY:\n {query_text}"
 
             print(f"Query: {query_text}")
             response_text = self.radio.brain.react_to_text(query_text)
             print(f"Response: {response_text}")
 
             if first_words:
-                self.play_tuning_sweep(duration=2, callback=self.radio.dial_servo.random_sweep_during)
-                self.radio.dial_servo.set_angle(self.SANTA_ANGLE)
+                # self.play_tuning_sweep(duration=2, callback=self.radio.dial_servo.random_sweep_during)
+                # self.radio.dial_servo.set_angle(self.SANTA_ANGLE)
                 first_words = False
 
-            self.stop_breathing()
             self.radio.voice.speak(response_text, rms_callback=self.radio.dial_led.set_led_to_voice, volume=self.SWEEP_VOLUME)
-            self.start_breathing()
 
-        self.stop_breathing()
+        self.stop_ambience()
         if random.random() < self.CALLAFTER_PROB:
             self.call_after_guest()
-        self.stop_hiss()
 
     def call_after_guest(self):
         # Call after the guest (trigger ocassionally)
