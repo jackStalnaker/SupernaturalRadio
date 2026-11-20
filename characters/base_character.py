@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 
 
 class BaseCharacter(ABC):
+    CHARACTER_NAME = "BaseCharacter"
+
     QUIET_TEASE_PROB = 0.20
     CALLAFTER_PROB = 0.20
 
@@ -21,6 +23,26 @@ class BaseCharacter(ABC):
     @abstractmethod
     def wait_for_guest(self):
         raise NotImplementedError("interact_with_guest must be implemented in subclasses.")
+
+    def interact_with_guest_text_only(self):
+        print("Beginning guest interaction.")
+        self.radio.brain.start_new_conversation(self.response_instructions, self.scene_instructions)
+
+        first_words = True
+
+        while True:
+            query_text = input("\nVisitor: ")
+            if query_text.lower() in ["exit", "quit"]:
+                break
+
+            if query_text.lower() in ["reset", "restart"]:
+                self.radio.brain.start_new_conversation(self.response_instructions, self.scene_instructions)
+                print("Conversation reset.")
+                continue
+
+            response_text = self.radio.brain.react_to_text(query_text)
+
+            print(f"{self.CHARACTER_NAME}: ", response_text)
 
     @abstractmethod
     def interact_with_guest(self):

@@ -51,7 +51,6 @@ class Malachi(BaseCharacter):
     def __init__(self, radio):
         print("Initializing Malachi...")
         super().__init__(radio)
-        self.radio.voice.select_voice(self.VOICE_ID)
         self.asset_dir = Path(__file__).resolve().parent
 
         # This block is just for redacting my personal information in the repository.
@@ -226,7 +225,31 @@ class Malachi(BaseCharacter):
         return True
 
     def interact_with_guest(self):
+        if self.character is None:
+            raise ValueError("No character selected. Call select_character() first.")
+        
         print("Beginning guest interaction.")
+        self.radio.brain.start_new_conversation(self.response_instructions, self.scene_instructions)
+
+        first_words = True
+
+        while True:
+            query_text = input("\nVisitor: ")
+            if query_text.lower() in ["exit", "quit"]:
+                break
+
+            if query_text.lower() in ["reset", "restart"]:
+                self.radio.brain.start_new_conversation(self.response_instructions, self.scene_instructions)
+                print("Conversation reset.")
+                continue
+
+            response_text = self.radio.brain.react_to_text(query_text)
+
+            print("Malachi: ", response_text)
+
+    def interact_with_guest(self):
+        print("Beginning guest interaction.")
+        self.radio.voice.select_voice(self.VOICE_ID)
         self.radio.brain.start_new_conversation(self.response_instructions, self.scene_instructions)
 
         self.radio.dial_led.set_rgb(0, 255, 0)

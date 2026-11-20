@@ -8,32 +8,24 @@ from brain import Brain
 # This is a text-only interaction. Useful for prompt debugging and testing.
 #
 
-class Malachi:
+class SupernaturalRadio:
 
     def __init__(self):
-        print("Initializing Malachi...")
+        print("Initializing SupernaturalRadio...")
         self.brain = Brain()
-        print("Initializing Malachi done.")
+        self.character = None
+        self.character_name = None
+        print("Initializing SupernaturalRadio done.")
         
-    def interact_with_guest(self):
-        print("Beginning guest interaction.")
-        self.brain.start_new_conversation()
-
-        first_words = True
-
-        while True:
-            visitor = input("\nVisitor: ")
-            if visitor.lower() in ["exit", "quit"]:
-                break
-
-            if visitor.lower in ["reset", "restart"]:
-                self.brain.start_new_conversation()
-                print("Conversation reset.")
-                continue
-
-            response = self.brain.react_to_text(visitor)
-
-            print("Malachi: ", response)
+    def select_character(self, character_name):
+        if character_name == "malachi":
+            from characters.malachi.malachi import Malachi
+            self.character = Malachi(self)
+        elif character_name == "santa":
+            from characters.santa.santa import Santa
+            self.character = Santa(self)
+        else:
+            raise ValueError(f"Unknown character: {character_name}")
 
 
 def environment_check():
@@ -51,10 +43,11 @@ def main():
     environment_check()
 
     print("initializing")
-    malachi = Malachi()
+    supernatural_radio = SupernaturalRadio()
 
     print("running")
-    malachi.interact_with_guest()
+    supernatural_radio.select_character("santa")
+    supernatural_radio.character.interact_with_guest_text_only()
 
 
 if __name__ == "__main__":
